@@ -164,4 +164,4 @@ Feel free to submit issues and pull requests.
 
 ## License
 
-This project is licensed under the [Apapche License](LICENSE).
+This project is licensed under the [Apache License](LICENSE).
