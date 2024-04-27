@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <link href="static/style.css" rel="stylesheet" type="text/css" />
+  <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@2.8.2/dist/alpine.min.js"></script>
+</head>
+<body>
+  <div id="wrapper" x-data="jobsApp()" x-init="init()">
+    <div id="header">
+      <h2 class="clr left">cronsvc</h2>
+    </div>
+    <div>
+      <ul class="clr right" id="buttons">
+        <li class="action-button"><a href="#" @click.prevent="openNewJobModal()">New Job</a></li>
+        <li class="action-button"><a href="#" @click.prevent="runAllJobs()">Run All</a></li>
+        <li class="action-button"><a href="#" @click.prevent="disableAllJobs()">Disable All</a></li>
+      </ul>
+      <table cellspacing="0">
+        <thead>
+          <tr>
+            <th>Schedule</th>
+            <th>Name</th>
+            <th>Last Run</th>
+            <th>Action</th>
+          </tr>
+        </thead>
+        <tbody>
+          <template x-for="job in jobs" :key="job.id">
+            <tr>
+              <td><span x-text="job.schedule"></span></td>
+              <td><span x-text="job.name"></span></td>
+              <td><span x-text="toLocalDate(job.last_run_utc)"></span></td>
+              <td class="action">
+                <ul>
+                  <li><a href="#" @click.prevent="runJob(job.id)">Run</a></li>
+                  <li><a href="#" @click.prevent="toggleJobStatus(job.id)" x-text="job.enabled ? 'Disable' : 'Enable'"></a></li>
+                  <li><a :href="'job/' + job.id + '/stdout'" target="_blank">Stdout</a></li>
+                  <li><a :href="'job/' + job.id + '/stderr'" target="_blank">Stderr</a></li>
+                  <li><a href="#" @click.prevent="openModal(job)">View/Edit</a></li>
+                  <li><a href="#" @click.prevent="delJob(job.id)">Remove</a></li>
+                </ul>
+              </td>
+            </tr>
+          </template>
+          <template x-if="newJobModal">
+            <div class="modal" @click.away="closeNewJobModal()">
+              <div class="modal-content">
+                <h3>New Job</h3>
+                <input type="text" x-model="newJob.name" placeholder="Name" />
+                <textarea x-model="newJob.schedule" rows="1" cols="50" placeholder="Schedule"></textarea>
+                <textarea x-model="newJob.body" rows="10" cols="50" placeholder="Content"></textarea>
+                <label>
+                  <input type="checkbox" x-model="newJob.enabled" />
+                  Enabled
+                </label>
+                <div class="">
+                  <button @click="createJob()">Create</button>
+                  <button @click="closeNewJobModal()">Cancel</button>
+                </div>
+              </div>
+            </div>
+          </template>
+        </tbody>
+      </table>
+      <template x-if="selectedJob">
+        <div class="modal" @click.away="closeModal()">
+          <div class="modal-content">
+            <h3 x-text="selectedJob.name"></h3>
+            <textarea x-model="selectedJob.schedule" rows="1" cols="50"></textarea>
+            <textarea x-model="selectedJob.body" rows="10" cols="50"></textarea>
+            <div class="">
+              <button @click="saveJobContent()">Save</button>
+              <button @click="closeModal()">Cancel</button>
+            </div>
+          </div>
+        </div>
+      </template>
+    </div>
+    <div class="push"></div>
+  </div>
+  <div class="clr" id="footer">
+    <div class="left"><a href="#">cronsvc</a><span>1.0</span></div>
+    <div class="right"><a href="#">cronsvc authors</a></strong></div>
+  </div>
+</body>
+
+<script>
+  function jobsApp() {
+    return {
+      jobs: [],
+      selectedJob: null,
+      newJobModal: false,
+      newJob: null,
+      openNewJobModal() {
+        this.newJob = {
+          name: '',
+          schedule: '',
+          body: '',
+          enabled: true,
+        };
+        this.newJobModal = true;
+      },
+
+      closeNewJobModal() {
+        this.newJobModal = false;
+      },
+    
+      async createJob() {
+        try {
+          await axios.post('/job', this.newJob);
+          this.closeNewJobModal();
+          this.init();
+        } catch (error) {
+          console.log('Error creating job:', error);
+        }
+      },
+
+      toLocalDate(utc) {
+        const date = new Date(utc + "Z");
+        if (isNaN(date)) {
+          return '';
+        }
+        return date.toLocaleString();
+      },
+      async init() {
+        try {
+          const response = await axios.get('/jobs');
+          this.jobs = response.data;
+        } catch (error) {
+          console.error('Error fetching jobs:', error);
+        }
+      },
+      async runAllJobs() {
+        try {
+          for (const job of this.jobs) {
+            if (job.enabled) {
+              await axios.post(`/job/${job.id}/run`);
+            }
+          }
+          this.init();
+        } catch (error) {
+          console.error('Error running all jobs:', error);
+        }
+      },
+      async disableAllJobs() {
+        try {
+          for (const job of this.jobs) {
+            if (job.enabled) {
+              await axios.post(`/job/${job.id}/disable`);
+            }
+          }
+          this.init();
+        } catch (error) {
+          console.error('Error disabling all jobs:', error);
+        }
+      },
+      async runJob(jobId) {
+        try {
+          await axios.post(`/job/${jobId}/run`);
+          this.init();
+        } catch (error) {
+          console.error('Error running job:', error);
+        }
+      },
+      async delJob(jobId) {
+        try {
+          await axios.post(`/job/${jobId}/del`);
+          this.init();
+        } catch (error) {
+          console.error('Error deleting job:', error);
+        }
+      },
+      async toggleJobStatus(jobId) {
+        const job = this.jobs.find(job => job.id === jobId);
+        const newStatus = !job.enabled;
+        try {
+          await axios.post(`/job/${jobId}/${newStatus ? 'enable' : 'disable'}`);
+          job.enabled = newStatus;
+        } catch (error) {
+          console.error('Error toggling job status:', error);
+        }
+      },
+      openModal(job) {
+        this.selectedJob = { ...job };
+        this.addEscapeEventListener();
+      },
+      closeModal() {
+        this.selectedJob = null;
+        this.removeEscapeEventListener();
+      },
+      addEscapeEventListener() {
+        this.handleEscapeKey = this.handleEscapeKey.bind(this); // Bind the function to the current context
+        document.addEventListener('keydown', this.handleEscapeKey);
+      },
+      removeEscapeEventListener() {
+          document.removeEventListener('keydown', this.handleEscapeKey);
+      },
+      handleEscapeKey(event) {
+          if (event.key === 'Escape') {
+              this.closeModal();
+          }
+      },
+      async saveJobContent() {
+        try {
+          await axios.post(`/job/${this.selectedJob.id}/update`, this.selectedJob);
+          this.closeModal();
+          this.init();
+        } catch (error) {
+          console.error('Error saving job content:', error);
+        }
+      },
+    };
+  }
+</script>
+</html>
