@@ -17,7 +17,7 @@ cronsvc, providing a simple RESTful API and Web UI to manage and execute schedul
 1. Clone this repository:
 
    ```
-   git clone [https://github.com/c4pt0r/cronsvc](https://github.com/c4pt0r/cronsvc)
+   git clone https://github.com/c4pt0r/cronsvc
    cd cronsvc
    ```
 
