@@ -9,7 +9,6 @@ from concurrent.futures import ThreadPoolExecutor
 
 import utils
 import log
-from crontab import CronTab
 from pydantic import BaseModel, Field
 
 class Job(BaseModel):
@@ -27,6 +26,7 @@ class Job(BaseModel):
     last_run_exit_code: int | None = Field(None, title="Last run exit code of the job")
     last_run_stdout: str | None = Field(None, title="Last run stdout of the job")
     last_run_stderr: str | None = Field(None, title="Last run stderr of the job")
+    running_status: str | None = Field(None, title="Running status of the job")
 
     def plan_next_run(self, dt = None):
         if self.schedule == "@once" or self.schedule == "":
@@ -39,14 +39,6 @@ class Job(BaseModel):
             except Exception:
                 return
         self.planned_next_run_utc = dt
-
-    def next_scheduled_run_utc(self):
-        cron_job = CronTab().new()
-        cron_job.setall(self.schedule)
-        schedule = cron_job.schedule(date_from=datetime.now())
-        dt = schedule.get_next()
-        utc_next_run = utils.local_time_to_utc(dt)
-        return utc_next_run
 
 class JobExecutor:
     def __init__(self, job: Job, logger=None, on_done=None, once=False):
@@ -77,6 +69,7 @@ class JobExecutor:
             line = process.stdout.readline()
             if not line:
                 break
+            line = line.strip()
             self.append_output(line)
         _, stderr = process.communicate()
         if process.returncode != 0:

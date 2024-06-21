@@ -72,9 +72,8 @@ templates = Jinja2Templates(directory="web/templates")
 
 @app.get("/", response_class=HTMLResponse)
 async def index(request: Request):
-    all_jobs = DB.db().get_all_jobs()
     return templates.TemplateResponse(
-        request=request, name="index.html", context={"request": request, "jobs": all_jobs}
+        request=request, name="index.html", context={"request": request}
     )
 
 @app.post("/job", response_model=Job)
@@ -125,7 +124,14 @@ async def get_job(job_id: int):
 
 @app.get("/jobs", response_model=list[Job])
 async def get_jobs():
-    return DB.db().get_all_jobs()
+    jobs = DB.db().get_all_jobs()
+    # get running job and update status
+    for j in jobs:
+        je = Server.instance().get_running_jobs(j.id)
+        if je and je.status() == "running":
+            j.running_status = "running"
+    return jobs
+
 
 @app.post("/job/{job_id}/update")
 async def update_job(job_id: int, job: Job):

@@ -21,7 +21,9 @@
           <tr>
             <th>Schedule</th>
             <th>Name</th>
+            <th>Running Status</th>
             <th>Last Run</th>
+            <th>Last Exit Code</th>
             <th>Action</th>
           </tr>
         </thead>
@@ -30,7 +32,9 @@
             <tr>
               <td><span x-text="job.schedule"></span></td>
               <td><span x-text="job.name"></span></td>
+              <td><span x-text="job.running_status"></span></td>
               <td><span x-text="toLocalDate(job.last_run_utc)"></span></td>
+              <td><span x-text="job.last_run_exit_code"></span></td>
               <td class="action">
                 <ul>
                   <li><a href="#" @click.prevent="runJob(job.id)">Run</a></li>

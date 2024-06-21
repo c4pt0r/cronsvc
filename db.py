@@ -192,10 +192,14 @@ class DB(object):
 
     def get_all_jobs(self) -> list[job.Job]:
         res = self.query("""
-            SELECT * FROM jobs ORDER BY id DESC
+            SELECT 
+                id, name, description, schedule, body, executor, meta, last_run_utc, create_time_utc, enabled, 
+                last_run_exit_code, last_run_stdout, last_run_stderr
+            FROM jobs ORDER BY id DESC
         """)
         jobs = []
         for r in res:
+            # load job meta from db
             j = job.Job(
                 id = r[0],
                 name = r[1],
