@@ -28,7 +28,7 @@ class Job(BaseModel):
     running_status: str | None = Field(None, title="Running status of the job")
 
     def plan_next_run(self, dt = None):
-        if self.schedule == "@once" or self.schedule == "":
+        if self.schedule == "":
             now_utc = utils.local_time_to_utc(datetime.now())
             self.planned_next_run_utc = now_utc
             return
@@ -214,7 +214,7 @@ class JobScheduler:
                 # if it's recurring job, plan next run
                 for je in done_jobs:
                     job = je.get_job()
-                    if len(job.schedule) > 0 and job.schedule != "@once" and not je.once:
+                    if len(job.schedule) > 0:
                         self.dispatch_job(job)
                     else:
                         log.get_logger().info("job %s is a one time job, remove from executing jobs", job.id)

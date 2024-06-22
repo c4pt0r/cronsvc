@@ -41,7 +41,7 @@ class Server:
     def load_jobs(self):
         all_jobs = DB.db().get_all_jobs()
         for j in all_jobs:
-            if not j.enabled or (j.schedule == "@once" and j.last_run_utc is not None):
+            if not j.enabled or j.schedule == "":
                 continue
             self.scheduler.dispatch_job(j)
 
