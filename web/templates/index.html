@@ -90,131 +90,164 @@
 </body>
 
 <script>
-  function jobsApp() {
-    return {
-      jobs: [],
-      selectedJob: null,
-      newJobModal: false,
-      newJob: null,
-      openNewJobModal() {
-        this.newJob = {
-          name: '',
-          schedule: '',
-          body: '',
-          enabled: true,
-        };
-        this.newJobModal = true;
-      },
+function jobsApp() {
+  return {
+    jobs: [],
+    selectedJob: null,
+    newJobModal: false,
+    newJob: null,
+    timer: null,
 
-      closeNewJobModal() {
-        this.newJobModal = false;
-      },
-    
-      async createJob() {
-        try {
-          await axios.post('/job', this.newJob);
-          this.closeNewJobModal();
-          this.init();
-        } catch (error) {
-          console.log('Error creating job:', error);
-        }
-      },
+    openNewJobModal() {
+      this.newJob = {
+        name: '',
+        schedule: '',
+        body: '',
+        enabled: true,
+      };
+      this.newJobModal = true;
+    },
 
-      toLocalDate(utc) {
-        const date = new Date(utc + "Z");
-        if (isNaN(date)) {
-          return '';
+    closeNewJobModal() {
+      this.newJobModal = false;
+    },
+
+    async createJob() {
+      try {
+        await axios.post('/job', this.newJob);
+        this.closeNewJobModal();
+        this.init();
+      } catch (error) {
+        console.log('Error creating job:', error);
+      }
+    },
+
+    toLocalDate(utc) {
+      const date = new Date(utc + "Z");
+      if (isNaN(date)) {
+        return '';
+      }
+      return date.toLocaleString();
+    },
+
+    async init() {
+      try {
+        const response = await axios.get('/jobs');
+        this.jobs = response.data;
+
+        // Check if any job is running, if not, stop the timer
+        if (!this.jobs.some(job => job.running_status === 'running')) {
+          this.stopTimer();
         }
-        return date.toLocaleString();
-      },
-      async init() {
-        try {
-          const response = await axios.get('/jobs');
-          this.jobs = response.data;
-        } catch (error) {
-          console.error('Error fetching jobs:', error);
-        }
-      },
-      async runAllJobs() {
-        try {
-          for (const job of this.jobs) {
-            if (job.enabled) {
-              await axios.post(`/job/${job.id}/run`);
-            }
+      } catch (error) {
+        console.error('Error fetching jobs:', error);
+      }
+    },
+
+    async runAllJobs() {
+      try {
+        for (const job of this.jobs) {
+          if (job.enabled) {
+            await axios.post(`/job/${job.id}/run`);
           }
-          this.init();
-        } catch (error) {
-          console.error('Error running all jobs:', error);
         }
-      },
-      async disableAllJobs() {
-        try {
-          for (const job of this.jobs) {
-            if (job.enabled) {
-              await axios.post(`/job/${job.id}/disable`);
-            }
+        this.startTimer();
+        this.init();
+      } catch (error) {
+        console.error('Error running all jobs:', error);
+      }
+    },
+
+    async disableAllJobs() {
+      try {
+        for (const job of this.jobs) {
+          if (job.enabled) {
+            await axios.post(`/job/${job.id}/disable`);
           }
-          this.init();
-        } catch (error) {
-          console.error('Error disabling all jobs:', error);
         }
-      },
-      async runJob(jobId) {
-        try {
-          await axios.post(`/job/${jobId}/run`);
-          this.init();
-        } catch (error) {
-          console.error('Error running job:', error);
-        }
-      },
-      async delJob(jobId) {
-        try {
-          await axios.post(`/job/${jobId}/del`);
-          this.init();
-        } catch (error) {
-          console.error('Error deleting job:', error);
-        }
-      },
-      async toggleJobStatus(jobId) {
-        const job = this.jobs.find(job => job.id === jobId);
-        const newStatus = !job.enabled;
-        try {
-          await axios.post(`/job/${jobId}/${newStatus ? 'enable' : 'disable'}`);
-          job.enabled = newStatus;
-        } catch (error) {
-          console.error('Error toggling job status:', error);
-        }
-      },
-      openModal(job) {
-        this.selectedJob = { ...job };
-        this.addEscapeEventListener();
-      },
-      closeModal() {
-        this.selectedJob = null;
-        this.removeEscapeEventListener();
-      },
-      addEscapeEventListener() {
-        this.handleEscapeKey = this.handleEscapeKey.bind(this); // Bind the function to the current context
-        document.addEventListener('keydown', this.handleEscapeKey);
-      },
-      removeEscapeEventListener() {
-          document.removeEventListener('keydown', this.handleEscapeKey);
-      },
-      handleEscapeKey(event) {
-          if (event.key === 'Escape') {
-              this.closeModal();
-          }
-      },
-      async saveJobContent() {
-        try {
-          await axios.post(`/job/${this.selectedJob.id}/update`, this.selectedJob);
-          this.closeModal();
-          this.init();
-        } catch (error) {
-          console.error('Error saving job content:', error);
-        }
-      },
-    };
-  }
+        this.init();
+      } catch (error) {
+        console.error('Error disabling all jobs:', error);
+      }
+    },
+
+    async runJob(jobId) {
+      try {
+        await axios.post(`/job/${jobId}/run`);
+        this.startTimer();
+        this.init();
+      } catch (error) {
+        console.error('Error running job:', error);
+      }
+    },
+
+    async delJob(jobId) {
+      try {
+        await axios.post(`/job/${jobId}/del`);
+        this.init();
+      } catch (error) {
+        console.error('Error deleting job:', error);
+      }
+    },
+
+    async toggleJobStatus(jobId) {
+      const job = this.jobs.find(job => job.id === jobId);
+      const newStatus = !job.enabled;
+      try {
+        await axios.post(`/job/${jobId}/${newStatus ? 'enable' : 'disable'}`);
+        job.enabled = newStatus;
+      } catch (error) {
+        console.error('Error toggling job status:', error);
+      }
+    },
+
+    openModal(job) {
+      this.selectedJob = { ...job };
+      this.addEscapeEventListener();
+    },
+
+    closeModal() {
+      this.selectedJob = null;
+      this.removeEscapeEventListener();
+    },
+
+    addEscapeEventListener() {
+      this.handleEscapeKey = this.handleEscapeKey.bind(this);
+      document.addEventListener('keydown', this.handleEscapeKey);
+    },
+
+    removeEscapeEventListener() {
+      document.removeEventListener('keydown', this.handleEscapeKey);
+    },
+
+    handleEscapeKey(event) {
+      if (event.key === 'Escape') {
+        this.closeModal();
+      }
+    },
+
+    async saveJobContent() {
+      try {
+        await axios.post(`/job/${this.selectedJob.id}/update`, this.selectedJob);
+        this.closeModal();
+        this.init();
+      } catch (error) {
+        console.error('Error saving job content:', error);
+      }
+    },
+
+    startTimer() {
+      if (this.timer) return; // Prevent multiple timers
+      this.timer = setInterval(() => this.init(), 3000);
+    },
+
+    stopTimer() {
+      if (this.timer) {
+        clearInterval(this.timer);
+        this.timer = null;
+      }
+    },
+  };
+}
 </script>
 </html>
