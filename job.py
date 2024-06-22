@@ -8,6 +8,7 @@ from concurrent.futures import ThreadPoolExecutor
 
 import utils
 import log
+from crontab import CronTab
 from pydantic import BaseModel, Field
 
 class Job(BaseModel):
@@ -38,6 +39,14 @@ class Job(BaseModel):
             except Exception:
                 return
         self.planned_next_run_utc = dt
+
+    def next_scheduled_run_utc(self):
+        cron_job = CronTab().new()
+        cron_job.setall(self.schedule)
+        schedule = cron_job.schedule(date_from=datetime.now())
+        dt = schedule.get_next()
+        utc_next_run = utils.local_time_to_utc(dt)
+        return utc_next_run
 
 class JobExecutor:
     def __init__(self, job: Job, logger=None, on_done=None, once=False):
