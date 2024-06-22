@@ -14,7 +14,7 @@ from job import JobScheduler, Job, JobExecutor
 
 class Server:
     def __init__(self):
-        self.scheduler = None
+        self.scheduler : JobScheduler
 
     def get_running_jobs(self, job_id):
         # find job executor by job id
@@ -146,7 +146,7 @@ async def update_job(job_id: int, job: Job):
     Server.instance().scheduler.dispatch_job(j)
     return j
 
-def get_job_output_from_db(job_id: int):
+def get_job_output_from_db(job_id: int) -> dict:
     return DB.db().get_job_last_run_info(job_id)
 
 @app.get("/job/{job_id}/stdout")

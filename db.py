@@ -169,7 +169,7 @@ class DB(object):
             enabled = res[9],
         )
 
-    def get_job_last_run_info(self, job_id):
+    def get_job_last_run_info(self, job_id) -> dict | None:
         res = self.query_one(f"""
             SELECT last_run_exit_code, last_run_stdout, last_run_stderr, last_run_utc
             FROM jobs WHERE id = {job_id}
