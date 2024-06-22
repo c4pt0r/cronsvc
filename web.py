@@ -28,8 +28,8 @@ class Server:
                 stderr, _ = je.get_error()
                 retcode = je.return_code()
 
-                stdout = '\n'.join(stdout)[:4096]
-                stderr = '\n'.join(stderr)[:4096]
+                stdout = '\n'.join(stdout)[:40960]
+                stderr = '\n'.join(stderr)[:40960]
 
                 DB.db().update_last_run(je.job.id, datetime.now(), retcode, stdout, stderr)
                 log.get_logger().info("Job %s done, stdout: %s, stderr: %s, retcode: %d, updating db...",

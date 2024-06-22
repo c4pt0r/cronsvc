@@ -2,7 +2,6 @@ import os
 import subprocess
 import threading
 import logging
-import uuid
 import time
 from datetime import datetime
 from concurrent.futures import ThreadPoolExecutor
@@ -65,15 +64,9 @@ class JobExecutor:
                                    stderr=subprocess.PIPE,
                                    text=True, env=env)
         self.running_process = process
-        while True:
-            line = process.stdout.readline()
-            if not line:
-                break
-            line = line.strip()
-            self.append_output(line)
-        _, stderr = process.communicate()
-        if process.returncode != 0:
-            self.append_error(stderr)
+        stdout, stderr = process.communicate()
+        self.append_error(stderr)
+        self.append_output(stdout)
         return process.returncode
 
     # run function will execute the job in worker thread
@@ -125,7 +118,6 @@ class JobExecutor:
             return self.stat
 
     def id(self):
-        # TODO should execute job id be different from job id?
         return self.job.id
 
     def get_result(self):

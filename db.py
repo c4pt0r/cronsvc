@@ -244,12 +244,11 @@ class DB(object):
         if exit_code is not None:
             update_pairs.append("last_run_exit_code = %s")
             value_pairs.append(exit_code)
-        if stdout:
-            update_pairs.append("last_run_stdout = %s")
-            value_pairs.append(stdout)
-        if stderr:
-            update_pairs.append("last_run_stderr = %s")
-            value_pairs.append(stderr)
+
+        update_pairs.append("last_run_stdout = %s")
+        value_pairs.append(stdout)
+        update_pairs.append("last_run_stderr = %s")
+        value_pairs.append(stderr)
 
         self.execute("UPDATE jobs SET " + ", ".join(update_pairs) + " WHERE id = %s",
                      value_pairs + [job_id])
