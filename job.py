@@ -82,8 +82,12 @@ class JobExecutor:
     def run(self):
         self.set_status("running")
         if self.job.executor == "shell":
-            retcode = self.exec_shell_cmd(self.job.body)
-            self.set_return_code(retcode)
+            # ignore all the error from shell command
+            try:
+                retcode = self.exec_shell_cmd(self.job.body)
+                self.set_return_code(retcode)
+            except Exception as e:
+                self.append_error(f"Error executing shell command: {e}")
         else:
             self.append_error(f"Executor {self.job.executor} not supported")
         self.set_status("done")
